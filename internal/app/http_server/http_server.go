@@ -3,24 +3,31 @@ package http_server
 import (
 	"fmt"
 	"http-server/internal/app/http_server/handler"
+	"http-server/internal/app/http_server/handler/errors"
 	"http-server/internal/app/http_server/routing"
 	"http-server/internal/app/routes/api"
 	"http-server/internal/app/routes/ui"
 	"net"
 )
 
-type HttpServer struct{}
-
-var routeDispatcher *routes.RouteDispatcher
-
-func init() {
-	routeDispatcher = routes.MakeRegisterRoute()
-	routeDispatcher.RegisterRoute("/", ui.RouteUIIndex{})
-	routeDispatcher.RegisterRoute("/api", api.RouteApi{})
+type HttpServer struct {
+	connections_queue chan net.Conn
 }
 
 func BuildHttpServer() HttpServer {
-	return HttpServer{}
+	routeDispatcher := routing.MakeRegisterRoute()
+	routeDispatcher.RegisterRoute("/", ui.RouteUIIndex{})
+	routeDispatcher.RegisterRoute("/api", api.RouteApi{})
+
+	server := HttpServer{
+		connections_queue: make(chan net.Conn, 5000),
+	}
+
+	for i := 0; i < 500; i++ {
+		go handler.SpawnHandler(server.connections_queue, routeDispatcher)
+	}
+
+	return server
 }
 
 func (h HttpServer) Serve(host, path string) {
@@ -35,6 +42,10 @@ func (h HttpServer) Serve(host, path string) {
 			panic("Could not accept connection")
 		}
 		fmt.Println("Incoming request received, handling...")
-		go handler.HttpHandler{}.Handle(clientConnection, routeDispatcher)
+		select {
+		case h.connections_queue <- clientConnection:
+		default:
+			errors.TooManyRequestsHandler{}.Handle("", clientConnection)
+		}
 	}
 }

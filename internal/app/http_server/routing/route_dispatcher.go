@@ -25,7 +25,7 @@ func (r *RouteDispatcher) RegisterRoute(url string, handler RouteHandler) {
 func (r *RouteDispatcher) Route(request string, connection net.Conn) error {
 	path, error := GetRequestPath(request)
 	if error != nil {
-		return errors.New("Request path not found for request, disregarding...")
+		return error
 	}
 	handler, ok := r.routes[path]
 	if !ok {
@@ -47,7 +47,7 @@ func GetRequestPath(request string) (string, error) {
 		return "", fmt.Errorf("First line is not composed of three space separated tokens, instead: %s", lines[0])
 	}
 
-	pattern, err := regexp.Compile("$/[a-zA-Z_0-9!$&'+()*,;=:-@.~/]+")
+	pattern, err := regexp.Compile("^/[a-zA-Z_0-9!$&'+()*,;=:-@.~/]*$")
 	if err != nil {
 		return "", fmt.Errorf("Could not compile regexp pattern")
 	}

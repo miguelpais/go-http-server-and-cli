@@ -6,16 +6,22 @@ import (
 	"net"
 )
 
-type HttpHandler struct{}
+func SpawnHandler(readChannel <-chan net.Conn, routeDispatcher *routing.RouteDispatcher) {
+	for {
+		select {
+		case conn := <-readChannel:
+			defer conn.Close()
+			reader := RequestReader{}
+			request, error := reader.ReadHttpRequest(conn)
+			if error != nil {
+				fmt.Sprintf("Could not read request, error was %s, disregarding...", error)
+			}
 
-func (h HttpHandler) Handle(connection net.Conn, routeDispatcher *routes.RouteDispatcher) {
-	defer connection.Close()
-	reader := RequestReader{}
-	request, error := reader.ReadHttpRequest(connection)
-	if error != nil {
-		fmt.Sprintf("Could not read request, error was %s, disregarding...", error)
+			fmt.Printf("Received request: \n%s", request)
+			err := routeDispatcher.Route(request, conn)
+			if err != nil {
+				fmt.Println("Could not route request, error was ", err)
+			}
+		}
 	}
-
-	fmt.Printf("Received request: \n%s", request)
-	routeDispatcher.Route(request, connection)
 }
