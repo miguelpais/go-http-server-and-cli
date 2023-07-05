@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"regexp"
 	"strings"
 )
 
@@ -38,12 +39,20 @@ func (r *RouteDispatcher) Route(request string, connection net.Conn) error {
 func GetRequestPath(request string) (string, error) {
 	lines := strings.Split(request, "\n")
 	if len(lines) < 1 {
-		return "", errors.New("Request is a single line, which is incorrect")
+		return "", fmt.Errorf("Request is a single line, which is incorrect")
 	}
 
 	firstLineParts := strings.Split(lines[0], " ")
 	if len(firstLineParts) < 2 {
-		return "", errors.New("Could not obtain request path for request")
+		return "", fmt.Errorf("Could not obtain request path for request: %s", request)
+	}
+
+	pattern, err := regexp.Compile("$/[a-zA-Z_0-9!$&'+()*,;=:-@.~/]+")
+	if err != nil {
+		return "", fmt.Errorf("Could not compile regexp pattern")
+	}
+	if !pattern.Match([]byte(firstLineParts[1])) {
+		return "", fmt.Errorf("path: %s does not match an HTTP path", firstLineParts[1])
 	}
 
 	return firstLineParts[1], nil
