@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"http-server/internal/pkg/http_client"
+	"http-server/internal/app/http_client"
 	"strings"
 )
 

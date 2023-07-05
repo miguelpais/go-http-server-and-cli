@@ -2,13 +2,13 @@ package handler
 
 import (
 	"fmt"
-	"http-server/internal/pkg/http_server/routes"
+	"http-server/internal/app/http_server/routing"
 	"net"
 )
 
 type HttpHandler struct{}
 
-func (h HttpHandler) Handle(connection net.Conn) {
+func (h HttpHandler) Handle(connection net.Conn, routeDispatcher *routes.RouteDispatcher) {
 	defer connection.Close()
 	reader := RequestReader{}
 	request, error := reader.ReadHttpRequest(connection)
@@ -17,5 +17,5 @@ func (h HttpHandler) Handle(connection net.Conn) {
 	}
 
 	fmt.Printf("Received request: \n%s", request)
-	routes.RouteDispatcherSingleton().Route(request, connection)
+	routeDispatcher.Route(request, connection)
 }

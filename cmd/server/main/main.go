@@ -1,7 +1,7 @@
 package main
 
 import (
-	"http-server/internal/pkg/http_server"
+	"http-server/internal/app/http_server"
 )
 
 func main() {
