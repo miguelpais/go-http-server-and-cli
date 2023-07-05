@@ -23,18 +23,6 @@ var positiveScenarios = []struct {
 		"/api"},
 }
 
-var invalidScenarios = []struct {
-	desc string
-	in   string
-}{
-	{"blank string received",
-		""},
-	{"malformed http request ",
-		"GET HTTP/1.1\r\n"},
-	{"giberish request",
-		"this is a lot of giberish"},
-}
-
 func TestGetPathForRequestPositiveScenarios(t *testing.T) {
 	for _, tc := range positiveScenarios {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -47,6 +35,22 @@ func TestGetPathForRequestPositiveScenarios(t *testing.T) {
 			}
 		})
 	}
+}
+
+var invalidScenarios = []struct {
+	desc string
+	in   string
+}{
+	{"blank string received",
+		""},
+	{"no path in http request ",
+		"GET HTTP/1.1\r\n"},
+	{"double path http request ",
+		"GET / / HTTP/1.1\r\n"},
+	{"path does not start with / http request ",
+		"GET abc HTTP/1.1\r\n"},
+	{"giberish request",
+		"this is a lot of giberish"},
 }
 
 func TestGetPathForRequestInvalidScenarios(t *testing.T) {

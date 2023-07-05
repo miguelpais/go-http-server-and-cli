@@ -43,8 +43,8 @@ func GetRequestPath(request string) (string, error) {
 	}
 
 	firstLineParts := strings.Split(lines[0], " ")
-	if len(firstLineParts) < 2 {
-		return "", fmt.Errorf("Could not obtain request path for request: %s", request)
+	if len(firstLineParts) != 3 {
+		return "", fmt.Errorf("First line is not composed of three space separated tokens, instead: %s", lines[0])
 	}
 
 	pattern, err := regexp.Compile("$/[a-zA-Z_0-9!$&'+()*,;=:-@.~/]+")
