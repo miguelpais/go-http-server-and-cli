@@ -10,8 +10,10 @@ import (
 	"net"
 )
 
+var maxIncomingConnections = 50
+
 type HttpServer struct {
-	connections_queue chan net.Conn
+	connectionsQueue chan net.Conn
 }
 
 func BuildHttpServer() HttpServer {
@@ -20,11 +22,11 @@ func BuildHttpServer() HttpServer {
 	routeDispatcher.RegisterRoute("/api", api.RouteApi{})
 
 	server := HttpServer{
-		connections_queue: make(chan net.Conn, 5000),
+		connectionsQueue: make(chan net.Conn, maxIncomingConnections),
 	}
 
-	for i := 0; i < 500; i++ {
-		go handler.SpawnHandler(server.connections_queue, routeDispatcher)
+	for i := 0; i < 10; i++ {
+		go handler.SpawnHandler(server.connectionsQueue, routeDispatcher)
 	}
 
 	return server
@@ -37,13 +39,15 @@ func (h HttpServer) Serve(host, path string) {
 	}
 	fmt.Println("Accepting connections..")
 	for true {
+		fmt.Println("Number of requests in queue: %d", len(h.connectionsQueue))
+
 		clientConnection, err := connection.Accept()
 		if err != nil {
 			panic("Could not accept connection")
 		}
-		fmt.Println("Incoming request received, handling...")
+
 		select {
-		case h.connections_queue <- clientConnection:
+		case h.connectionsQueue <- clientConnection:
 		default:
 			errors.TooManyRequestsHandler{}.Handle("", clientConnection)
 		}

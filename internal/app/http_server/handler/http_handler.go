@@ -17,7 +17,6 @@ func SpawnHandler(readChannel <-chan net.Conn, routeDispatcher *routing.RouteDis
 				fmt.Sprintf("Could not read request, error was %s, disregarding...", error)
 			}
 
-			fmt.Printf("Received request: \n%s", request)
 			err := routeDispatcher.Route(request, conn)
 			if err != nil {
 				fmt.Println("Could not route request, error was ", err)

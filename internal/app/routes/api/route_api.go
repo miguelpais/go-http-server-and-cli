@@ -15,4 +15,5 @@ func (u RouteApi) Handle(_ string, connection net.Conn) {
 			"Content-Length: %d\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"+
 			"%s",
 		len(content), content)))
+	connection.Close()
 }
