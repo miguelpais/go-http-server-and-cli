@@ -17,12 +17,8 @@ func SpawnHandler(readChannel <-chan net.Conn, routeDispatcher *routing.RouteDis
 			if err != nil {
 				conn.Close()
 				fmt.Sprintf("Could not read request, error was %s, closing connection...", err)
-
+				
 				continue
-			}
-
-			if len([]byte(request)) == 0 {
-				fmt.Println("WRONG")
 			}
 
 			err = routeDispatcher.Route(request, conn)
