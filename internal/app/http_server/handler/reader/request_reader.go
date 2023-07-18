@@ -1,4 +1,4 @@
-package handler
+package reader
 
 import (
 	"errors"
@@ -9,26 +9,34 @@ import (
 type RequestReader struct{}
 
 func (r RequestReader) ReadHttpRequest(reader io.Reader) (string, error) {
-	var response []byte
+	var request []byte
 	var buffer = make([]byte, 1024)
-	for {
-		nRead, error := reader.Read(buffer)
 
-		if error == io.EOF {
-			return string(response), nil
+	for {
+		nRead, err := reader.Read(buffer)
+		if err == io.EOF {
+			if len(request) > 0 {
+				return string(request), nil
+			} else {
+				return "", errors.New("end of file got before content")
+			}
 		}
-		if error != nil {
+		if err != nil {
 			return "", errors.New("Reading request failed")
 		}
 
-		response = append(response, buffer[:nRead]...)
+		if nRead == 0 {
+			return "", errors.New("no bytes read")
+		}
+
+		request = append(request, buffer[:nRead]...)
 
 		if detectEndOfHttpRequest(buffer[:nRead]) {
 			break
 		}
 	}
 
-	return string(response), nil
+	return string(request), nil
 }
 
 func detectEndOfHttpRequest(buffer []byte) bool {

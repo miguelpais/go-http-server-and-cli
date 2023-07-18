@@ -3,6 +3,7 @@ package routing
 import (
 	"errors"
 	"fmt"
+	errorHandlers "http-server/internal/app/http_server/handler/errors"
 	"net"
 	"regexp"
 	"strings"
@@ -29,7 +30,8 @@ func (r *RouteDispatcher) Route(request string, connection net.Conn) error {
 	}
 	handler, ok := r.routes[path]
 	if !ok {
-		return errors.New(fmt.Sprintf("RouteHandler has no route registered for path %s, disregarding", path))
+		errorHandlers.NotFoundHandler{}.Handle("", connection)
+		return errors.New(fmt.Sprintf("RouteHandler has no route registered for path %s, returning NOT FOUND", path))
 	}
 
 	handler.Handle(request, connection)
@@ -37,14 +39,14 @@ func (r *RouteDispatcher) Route(request string, connection net.Conn) error {
 }
 
 func GetRequestPath(request string) (string, error) {
-	lines := strings.Split(request, "\n")
+	lines := strings.Split(request, "\r\n")
 	if len(lines) < 1 {
 		return "", fmt.Errorf("Request is a single line, which is incorrect")
 	}
 
 	firstLineParts := strings.Split(lines[0], " ")
 	if len(firstLineParts) != 3 {
-		return "", fmt.Errorf("First line is not composed of three space separated tokens, instead: %s", lines[0])
+		return "", fmt.Errorf("First line is not composed of three space separated tokens")
 	}
 
 	pattern, err := regexp.Compile("^/[a-zA-Z_0-9!$&'+()*,;=:-@.~/]*$")

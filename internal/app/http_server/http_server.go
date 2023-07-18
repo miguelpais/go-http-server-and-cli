@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"http-server/internal/app/http_server/handler"
 	"http-server/internal/app/http_server/handler/errors"
+	requestReader "http-server/internal/app/http_server/handler/reader"
 	"http-server/internal/app/http_server/routing"
 	"http-server/internal/app/routes/api"
 	"http-server/internal/app/routes/ui"
 	"net"
 )
 
-var maxIncomingConnections = 50
+var maxWorkers = 20
+var maxQueuedConnections = 20
 
 type HttpServer struct {
 	connectionsQueue chan net.Conn
@@ -22,10 +24,10 @@ func BuildHttpServer() HttpServer {
 	routeDispatcher.RegisterRoute("/api", api.RouteApi{})
 
 	server := HttpServer{
-		connectionsQueue: make(chan net.Conn, maxIncomingConnections),
+		connectionsQueue: make(chan net.Conn, maxQueuedConnections),
 	}
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < maxWorkers; i++ {
 		go handler.SpawnHandler(server.connectionsQueue, routeDispatcher)
 	}
 
@@ -39,8 +41,6 @@ func (h HttpServer) Serve(host, path string) {
 	}
 	fmt.Println("Accepting connections..")
 	for true {
-		fmt.Println("Number of requests in queue: %d", len(h.connectionsQueue))
-
 		clientConnection, err := connection.Accept()
 		if err != nil {
 			panic("Could not accept connection")
@@ -49,7 +49,15 @@ func (h HttpServer) Serve(host, path string) {
 		select {
 		case h.connectionsQueue <- clientConnection:
 		default:
-			errors.TooManyRequestsHandler{}.Handle("", clientConnection)
+			reader := requestReader.RequestReader{}
+			_, err := reader.ReadHttpRequest(clientConnection)
+			if err != nil {
+				fmt.Println("Could not read request, error was:")
+				fmt.Println(err)
+				clientConnection.Close()
+			} else {
+				errors.TooManyRequestsHandler{}.Handle("", clientConnection)
+			}
 		}
 	}
 }
