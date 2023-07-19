@@ -57,7 +57,6 @@ func Refill(l *Limiter) {
 	time.AfterFunc(5000*time.Microsecond, func() {
 		l.tokensMutex.Lock()
 		if l.tokensBucketDepth < TOKENS_DEPTH_SIZE {
-			l.tokensMutex.Unlock()
 			select {
 			case conn := <-l.pendingConnectionsQueue:
 				select {
@@ -66,20 +65,16 @@ func Refill(l *Limiter) {
 				default:
 					select {
 					case l.pendingConnectionsQueue <- conn:
-						l.tokensMutex.Lock()
 						l.tokensBucketDepth++
-						l.tokensMutex.Unlock()
 					default:
 						consumer.Consumer{}.ConsumeAndRespond(conn, responses.TooManyRequestsResponse{})
 					}
 				}
 			default:
-				l.tokensMutex.Lock()
 				l.tokensBucketDepth++
-				l.tokensMutex.Unlock()
 			}
-		} else {
-			l.tokensMutex.Unlock()
 		}
+
+		l.tokensMutex.Unlock()
 	})
 }
