@@ -1,12 +1,12 @@
-package errors
+package responses
 
 import (
 	"net"
 )
 
-type BadRequestHandler struct{}
+type BadRequestResponse struct{}
 
-func (u BadRequestHandler) Handle(_ string, connection net.Conn) {
+func (u BadRequestResponse) Respond(connection net.Conn) {
 	connection.Write([]byte(
 		"HTTP/1.1 400 BAD REQUEST\r\n" +
 			"Content-Type: text/htlm\r\n\r\n"))

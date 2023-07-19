@@ -1,12 +1,12 @@
-package errors
+package responses
 
 import (
 	"net"
 )
 
-type TooManyRequestsHandler struct{}
+type TooManyRequestsResponse struct{}
 
-func (u TooManyRequestsHandler) Handle(_ string, connection net.Conn) {
+func (u TooManyRequestsResponse) Respond(connection net.Conn) {
 	connection.Write([]byte(
 		"HTTP/1.1 429 TOO MANY REQUESTS\r\n" +
 			"Content-Type: text/htlm\r\n" +

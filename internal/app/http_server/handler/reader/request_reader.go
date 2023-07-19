@@ -1,6 +1,7 @@
 package reader
 
 import (
+	"context"
 	"errors"
 	"io"
 	"strings"
@@ -8,31 +9,33 @@ import (
 
 type RequestReader struct{}
 
-func (r RequestReader) ReadHttpRequest(reader io.Reader) (string, error) {
+func (r RequestReader) ReadHttpRequest(ctx context.Context, reader io.Reader) (string, error) {
 	var request []byte
 	var buffer = make([]byte, 1024)
 
+readLoop:
 	for {
-		nRead, err := reader.Read(buffer)
-		if err == io.EOF {
-			if len(request) > 0 {
-				return string(request), nil
-			} else {
-				return "", errors.New("end of file got before content")
+		select {
+		case <-ctx.Done():
+			return "", errors.New("context cancelled, read timeout reached")
+		default:
+			nRead, err := reader.Read(buffer)
+			if err == io.EOF {
+				if len(request) > 0 {
+					return string(request), nil
+				} else {
+					return "", errors.New("end of file got before content")
+				}
 			}
-		}
-		if err != nil {
-			return "", errors.New("Reading request failed")
-		}
+			if err != nil {
+				return "", errors.New("Reading request failed")
+			}
 
-		if nRead == 0 {
-			return "", errors.New("no bytes read")
-		}
+			request = append(request, buffer[:nRead]...)
 
-		request = append(request, buffer[:nRead]...)
-
-		if detectEndOfHttpRequest(buffer[:nRead]) {
-			break
+			if detectEndOfHttpRequest(buffer[:nRead]) {
+				break readLoop
+			}
 		}
 	}
 

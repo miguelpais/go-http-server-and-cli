@@ -3,7 +3,7 @@ package routing
 import (
 	"errors"
 	"fmt"
-	errorHandlers "http-server/internal/app/http_server/handler/errors"
+	errorHandlers "http-server/internal/app/http_server/handler/responses"
 	"net"
 	"regexp"
 	"strings"
@@ -30,7 +30,7 @@ func (r *RouteDispatcher) Route(request string, connection net.Conn) error {
 	}
 	handler, ok := r.routes[path]
 	if !ok {
-		errorHandlers.NotFoundHandler{}.Handle("", connection)
+		errorHandlers.NotFoundResponse{}.Respond(connection)
 		return errors.New(fmt.Sprintf("RouteHandler has no route registered for path %s, returning NOT FOUND", path))
 	}
 
