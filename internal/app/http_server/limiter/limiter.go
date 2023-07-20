@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	TOKENS_DEPTH_SIZE      int = 1
-	MAX_QUEUED_CONNECTIONS int = 20
-	RATE_LIMITED_BUFFER    int = 2000
+	TOKENS_DEPTH_SIZE                int = 1
+	ACCEPTED_CONNECTIONS_BUFFER_SIZE int = 20
+	PENDING_CONNECTIONS_BUFFER_SIZE  int = 2000
 )
 
 type Limiter struct {
@@ -25,8 +25,8 @@ type Limiter struct {
 func MakeRateLimiter() *Limiter {
 	limiter := Limiter{
 		tokensBucketDepth:        TOKENS_DEPTH_SIZE,
-		pendingConnectionsQueue:  make(chan net.Conn, RATE_LIMITED_BUFFER),
-		AcceptedConnectionsQueue: make(chan net.Conn, MAX_QUEUED_CONNECTIONS),
+		pendingConnectionsQueue:  make(chan net.Conn, PENDING_CONNECTIONS_BUFFER_SIZE),
+		AcceptedConnectionsQueue: make(chan net.Conn, ACCEPTED_CONNECTIONS_BUFFER_SIZE),
 		tokensMutex:              sync.Mutex{},
 	}
 
@@ -54,7 +54,7 @@ func (l *Limiter) ProceedOrBufferConnection(conn net.Conn) (bool, error) {
 }
 
 func Refill(l *Limiter) {
-	time.AfterFunc(5000*time.Microsecond, func() {
+	time.AfterFunc(3333*time.Microsecond, func() {
 		l.tokensMutex.Lock()
 		if l.tokensBucketDepth < TOKENS_DEPTH_SIZE {
 			select {
