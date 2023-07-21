@@ -30,6 +30,8 @@ func MakeRateLimiter() *Limiter {
 		tokensMutex:              sync.Mutex{},
 	}
 
+	go Refill(&limiter)
+
 	return &limiter
 }
 
@@ -39,7 +41,6 @@ func (l *Limiter) ProceedOrBufferConnection(conn net.Conn) (bool, error) {
 		l.tokensBucketDepth--
 		l.tokensMutex.Unlock()
 
-		go Refill(l)
 		return true, nil
 	}
 
@@ -54,27 +55,31 @@ func (l *Limiter) ProceedOrBufferConnection(conn net.Conn) (bool, error) {
 }
 
 func Refill(l *Limiter) {
-	time.AfterFunc(3333*time.Microsecond, func() {
-		l.tokensMutex.Lock()
-		if l.tokensBucketDepth < TOKENS_DEPTH_SIZE {
-			select {
-			case conn := <-l.pendingConnectionsQueue:
+	ticker := time.NewTicker(3333 * time.Microsecond)
+	for {
+		select {
+		case <-ticker.C:
+			l.tokensMutex.Lock()
+			if l.tokensBucketDepth < TOKENS_DEPTH_SIZE {
 				select {
-				case l.AcceptedConnectionsQueue <- conn:
-					go Refill(l)
-				default:
+				case conn := <-l.pendingConnectionsQueue:
 					select {
-					case l.pendingConnectionsQueue <- conn:
-						l.tokensBucketDepth++
+					case l.AcceptedConnectionsQueue <- conn:
 					default:
-						consumer.Consumer{}.ConsumeAndRespond(conn, responses.TooManyRequestsResponse{})
+						select {
+						case l.pendingConnectionsQueue <- conn:
+							l.tokensBucketDepth++
+						default:
+							consumer.Consumer{}.ConsumeAndRespond(conn, responses.TooManyRequestsResponse{})
+						}
 					}
+				default:
+					l.tokensBucketDepth++
 				}
-			default:
-				l.tokensBucketDepth++
 			}
-		}
 
-		l.tokensMutex.Unlock()
-	})
+			l.tokensMutex.Unlock()
+		default:
+		}
+	}
 }
